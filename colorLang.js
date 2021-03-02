@@ -42,6 +42,7 @@ var colorPaletteNumeric = [
 ];
 
 var colorPalette = [];
+var colorPaletteCompliment = [];
 var colorPaletteDark = [];
 var colorPaletteLight = [];
 
@@ -55,23 +56,14 @@ for (var i = 0, n, r, g, b; i < colorPaletteAlpha.length; i++) {
 	// g = 127 * ((3 * i) % top) / top ;
 	// b = 127 * ((3 * 3 * i) % top) / top;
 	
-	r = colorPaletteAlpha[i][0] / 2;
-	g = colorPaletteAlpha[i][1] / 2;
-	b = colorPaletteAlpha[i][2] / 2;
+	r = colorPaletteAlpha[i][0];
+	g = colorPaletteAlpha[i][1];
+	b = colorPaletteAlpha[i][2];
 	
 	// colorPaletteDark.push('rgb(' + 128*r + ', ' + 128*g + ', ' + 128*b + ')');
 	// colorPaletteLight.push('rgb(' + 256*r + ', ' + 256*g + ', ' + 256*b + ')');
 	
 	colorPalette.push(
-		'rgb(' +
-		2*r +
-		', ' +
-		2*g +
-		', ' +
-		2*b +
-		')'
-	);
-	colorPaletteDark.push(
 		'rgb(' +
 		r +
 		', ' +
@@ -80,13 +72,13 @@ for (var i = 0, n, r, g, b; i < colorPaletteAlpha.length; i++) {
 		b +
 		')'
 	);
-	colorPaletteLight.push(
+	colorPaletteCompliment.push(
 		'rgb(' +
-		(r + 128) +
+		(255 - r) +
 		', ' +
-		(g + 128) +
+		(255 - g) +
 		', ' +
-		(b + 128) +
+		(255 - b) +
 		')'
 	);
 }
@@ -94,101 +86,129 @@ for (var i = 0, n, r, g, b; i < colorPaletteAlpha.length; i++) {
 function textNodesUnder(node){
 	var all = [];
 	for (node=node.firstChild;node;node=node.nextSibling){
-		if (node.nodeType==3) all.push(node);
+		if ((node.nodeType==Node.TEXT_NODE) &&
+			(node.parentElement.tagName !== 'STYLE') &&
+			(node.parentElement.tagName !== 'SCRIPT')// &&
+			// Span is to prevent reevaluation of a page.
+			/* (node.parentElement.tagName !== 'SPAN')*/)
+			all.push(node);
 		else all = all.concat(textNodesUnder(node));
 	}
 	return all;
 }
 
 // Copied code.
-function lightOrDark(color) {
+// function lightOrDark(color) {
 
-	// Variables for red, green, blue values
-	var r, g, b, hsp;
+// 	// Variables for red, green, blue values
+// 	var r, g, b, hsp;
 	
-	// Check the format of the color, HEX or RGB?
-	if (color.match(/^rgb/)) {
+// 	// Check the format of the color, HEX or RGB?
+// 	if (color.match(/^rgb/)) {
 
-		// If RGB --> store the red, green, blue values in separate variables
-		color = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
+// 		// If RGB --> store the red, green, blue values in separate variables
+// 		color = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
 		
-		r = color[1];
-		g = color[2];
-		b = color[3];
-	} 
-	else {
+// 		r = color[1];
+// 		g = color[2];
+// 		b = color[3];
+// 	} 
+// 	else {
 		
-		// If hex --> Convert it to RGB: http://gist.github.com/983661
-		color = +("0x" + color.slice(1).replace( 
-		color.length < 5 && /./g, '$&$&'));
+// 		// If hex --> Convert it to RGB: http://gist.github.com/983661
+// 		color = +("0x" + color.slice(1).replace( 
+// 		color.length < 5 && /./g, '$&$&'));
 
-		r = color >> 16;
-		g = color >> 8 & 255;
-		b = color & 255;
-	}
+// 		r = color >> 16;
+// 		g = color >> 8 & 255;
+// 		b = color & 255;
+// 	}
 	
-	// HSP (Highly Sensitive Poo) equation from http://alienryderflex.com/hsp.html
-	hsp = Math.sqrt(
-	0.299 * (r * r) +
-	0.587 * (g * g) +
-	0.114 * (b * b)
-	);
+// 	// HSP (Highly Sensitive Poo) equation from http://alienryderflex.com/hsp.html
+// 	hsp = Math.sqrt(
+// 	0.299 * (r * r) +
+// 	0.587 * (g * g) +
+// 	0.114 * (b * b)
+// 	);
 
-	// Using the HSP value, determine whether the color is light or dark
-	if (hsp>127.5) {
+// 	// Using the HSP value, determine whether the color is light or dark
+// 	if (hsp>127.5) {
 
-		return 'light';
-	} 
-	else {
+// 		return 'light';
+// 	} 
+// 	else {
 
-		return 'dark';
-	}
-}
+// 		return 'dark';
+// 	}
+// }
 
-function colorizeString(string, brightness, killLetters) {
+// function getContrastYIQ(hexcolor){
+//     hexcolor = hexcolor.replace("#", "");
+//     var r = parseInt(hexcolor.substr(0,2),16);
+//     var g = parseInt(hexcolor.substr(2,2),16);
+//     var b = parseInt(hexcolor.substr(4,2),16);
+//     var yiq = ((r*299)+(g*587)+(b*114))/1000;
+//     return (yiq >= 128) ? 'black' : 'white';
+// }
+
+function colorizeString(string, killLetters) {
 	var colorizedString = "";
 	var span;
 	var character;
 	var value;
+	var brightness;
 	
-	colorizedString += '<u>'
+	// Todo: Ignore any string that is only whitespace.
+	if (string === '') {
+		return string;
+	}
+	
+	// colorizedString += '<b>'
 	
 	for (var i = 0, length = string.length; i < length; i++) {
 		span = false;
 		
 		character = string.charAt(i);
 		value = character.toLowerCase().charCodeAt(0);
-		if ((value > 0x20) && (value < 0xff)) {
+		if ((value > 0x60) && (value < 0x7B)) {
 			span = true;
-		}
-		else if (value == 0x20) {
-			colorizedString += '</u>'
 		}
 		
 		if (span === true) {
 			colorizedString += '<span style="color: ';
-			colorizedString += colorPalette[(value - 0x61) % colorPalette.length];
 			if (killLetters) {
-				colorizedString += '; background-color: ';
 				colorizedString += colorPalette[(value - 0x61) % colorPalette.length];
 			}
+			else {
+				brightness = colorPaletteAlpha[(value - 0x61) % colorPaletteAlpha.length][0];
+				brightness += colorPaletteAlpha[(value - 0x61) % colorPaletteAlpha.length][1];
+				brightness += colorPaletteAlpha[(value - 0x61) % colorPaletteAlpha.length][2];
+				brightness /= 3;
+				
+				if (brightness < 128) {
+					colorizedString += 'white';
+				}
+				else {
+					colorizedString += 'black';
+				}
+				// colorizedString += colorPaletteCompliment[(value - 0x61) % colorPaletteCompliment.length];
+			}
+			colorizedString += '; background-color: ';
+			colorizedString += colorPalette[(value - 0x61) % colorPalette.length];
 			colorizedString += ';">' + character + '</span>';
 		}
 		else {
 			colorizedString += character;
-			if (value == 0x20) {
-				colorizedString += '<u>'
-			}
 		}
 	}
-	colorizedString += '</u>'
+	// colorizedString += '</b>'
+	
 	return colorizedString;
 }
 
 var nodes = textNodesUnder(document.body);
 for (var i in nodes) {
-  var brightness = lightOrDark(window.getComputedStyle(nodes[i].parentElement).getPropertyValue('background-color'));
 	replacementNode = document.createElement('span');
-	replacementNode.innerHTML = colorizeString(nodes[i].textContent, brightness, false)
+	replacementNode.innerHTML = colorizeString(nodes[i].textContent, false)
 	nodes[i].replaceWith(replacementNode)
 }
